@@ -8,7 +8,7 @@
     "node": ">=22"
   },
   "scripts": {
-    "test": "node --test --test-isolation=none",
+    "test": "node --test",
     "check": "node scripts/check.mjs",
     "demo": "node scripts/demo-server.mjs"
   }
