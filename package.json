@@ -1,0 +1,15 @@
+{
+  "name": "tiban-question-helper",
+  "version": "1.6.32",
+  "private": true,
+  "description": "Browser sidebar question assistant with text and optional screenshots",
+  "license": "MIT",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "test": "node --test --test-isolation=none",
+    "check": "node scripts/check.mjs",
+    "demo": "node scripts/demo-server.mjs"
+  }
+}

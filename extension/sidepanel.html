@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>题伴 · 浏览器答题助手</title>
+  <link rel="stylesheet" href="sidepanel.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><span class="mark" aria-hidden="true">题</span><div><h1>题伴</h1><p>读懂这一题</p></div></div>
+    <button id="settingsToggle" class="icon-button" title="模型设置" aria-label="模型设置" aria-expanded="false">⚙</button>
+  </header>
+  <main>
+    <section id="settingsSection" class="card settings" hidden>
+      <div class="card-heading"><h2>连接你的模型</h2><span class="tag">本机保存</span></div>
+      <form id="settingsForm">
+        <label for="baseUrl">API 地址（Base URL）</label>
+        <input id="baseUrl" type="url" required placeholder="https://dashscope.aliyuncs.com/compatible-mode/v1" autocomplete="off">
+        <label for="model">模型 ID</label>
+        <input id="model" required placeholder="deepseek-v4.1-flash" autocomplete="off">
+        <label for="apiKey">API Key</label>
+        <input id="apiKey" type="password" placeholder="粘贴你的 API Key" autocomplete="off" spellcheck="false">
+        <label class="check-row"><input id="vision" type="checkbox">允许按需截图识题（纯文字题优先文字，需要模型支持图片输入）</label>
+        <p class="hint">题目文字、必要的题目截图，以及启用自动适配时当前题的结构摘要会发送到上面的服务商。密钥仅保存在本机扩展中，不同步、不进入网页。</p>
+        <div class="row"><button class="primary" type="submit">保存设置</button><button id="testConnection" type="button" class="secondary">测试连接</button></div>
+        <button id="clearKey" type="button" class="text-button">清除本机密钥</button>
+        <p id="settingsStatus" class="hint" role="status"></p>
+      </form>
+      <details class="profile-settings"><summary>网站适配（高级）</summary>
+        <p id="profileSite" class="hint"></p>
+        <p class="hint">通用识别支持原生、ARIA、Element UI、Ant Design、Layui 和常见学习通选项。无法识别时，可填写此网站的 CSS 选择器；题干和选项相对于每题容器查找。留空使用通用适配。</p>
+        <label for="profile_question">每题容器</label><input id="profile_question" placeholder="例如 .question-item 或 .TiMu" maxlength="500">
+        <label for="profile_stem">题干</label><input id="profile_stem" placeholder="例如 .question-title 或 .Zy_TItle" maxlength="500">
+        <label for="profile_option">每个选项</label><input id="profile_option" placeholder="例如 .options > li" maxlength="500">
+        <label for="profile_selected">已选状态（选项自身或内部元素）</label><input id="profile_selected" placeholder="例如 .is-checked 或 [aria-checked='true']" maxlength="500">
+        <label for="profile_next">下一题按钮</label><input id="profile_next" placeholder="例如 #nextQuestion；最终提交仍由你操作" maxlength="500">
+        <label for="profile_type">自定义选项题型</label><select id="profile_type"><option value="">自动判断</option><option value="radio">单选 / 判断</option><option value="checkbox">多选</option></select>
+        <div class="row"><button id="saveProfile" class="small-button" type="button">保存本网站适配</button><button id="resetProfile" class="small-button" type="button">恢复通用适配</button></div>
+        <button id="clearAutoAdapters" class="small-button" type="button">清除本网站自动学习的规则</button>
+        <p id="profileStatus" class="hint warning" role="status"></p>
+      </details>
+    </section>
+
+    <section class="intro">
+      <div class="eyebrow"><span class="dot" id="activityDot"></span><span id="watchState">尚未连接页面</span></div>
+      <h2>题目在左，思路在这里。</h2>
+      <p id="siteLabel">打开测验网页，再点击开始。</p>
+      <div class="row"><button id="start" class="primary">开始读取此页面</button><button id="stop" class="secondary" disabled>暂停</button></div>
+      <button id="startAuto" class="primary full auto-start" type="button">开始自动答题</button>
+      <p id="autoMode" class="hint" role="status">当前模式：只显示参考答案</p>
+      <label class="check-row auto-row"><input id="autoAnswer" type="checkbox" checked>翻到新题时自动解答</label>
+      <label class="check-row auto-row"><input id="autoFlow" type="checkbox">自动填写并进入下一题（最终提交由我操作）</label>
+      <label class="check-row auto-row"><input id="autoAdapt" type="checkbox" checked>遇到新选择题结构时尝试自动适配</label>
+      <p id="autoFlowStatus" class="hint warning" hidden></p>
+      <button id="resumeAuto" class="small-button" type="button" hidden>继续自动填写</button>
+      <button id="copyAutoReport" class="small-button" type="button" hidden>复制诊断</button>
+      <p id="diagnosticStatus" class="hint" hidden></p>
+    </section>
+
+    <div id="status" class="status" role="status" aria-live="polite">先配置模型，再开始读题。</div>
+
+    <section class="card overview-card" aria-label="题目扫描与本次进度">
+      <div class="card-heading"><h2>题目与进度</h2><button id="refreshOverview" class="small-button" type="button" disabled>重新扫描</button></div>
+      <p id="overviewSummary" class="overview-summary" role="status">连接后自动扫描已加载题目</p>
+      <p id="overviewProgress" class="hint">本次已解答 0 题 · 已自动填写 0 题</p>
+      <p id="overviewHint" class="hint">执行时逐题重新读取，再解答和填写。</p>
+      <details><summary id="overviewListLabel">查看已识别题目（0）</summary><ol id="overviewList" class="overview-list"></ol></details>
+    </section>
+
+    <section class="card question-card">
+      <div class="card-heading"><h2>当前题目</h2><span id="sourceBadge" class="tag">等待读取</span></div>
+      <div class="tools"><button id="read" class="small-button" disabled>重新读取</button><button id="pick" class="small-button" disabled>选择题目区域</button><button id="reset" class="small-button" disabled>恢复自动</button></div>
+      <div id="pickerControls" hidden>
+        <p id="pickerHint" class="hint" role="status"></p>
+        <div class="tools"><button id="pickExpand" class="small-button" type="button" disabled>↑ 增加一题</button><button id="pickShrink" class="small-button" type="button" title="每次减少一道题，最少保留一题" disabled>↓ 减少一题</button><button id="pickConfirm" class="small-button" type="button" disabled>确认选区</button><button id="pickCancel" class="small-button" type="button">取消选择</button></div>
+      </div>
+      <div id="referenceNav" hidden>
+        <div class="tools"><button id="readPrevious" class="small-button" disabled>读取上一题</button><span id="readingOrderLabel" class="hint">按题序读取</span><button id="readNext" class="small-button" disabled>读取下一题</button></div>
+        <p id="referenceNavHint" class="hint">顺序跟读：当前题干滚过页面上沿后，先读相邻题。也可用上方按钮定位，始终由你填写答案。</p>
+      </div>
+      <label class="sr-only" for="questionText">识别的题目，可以手动修正</label>
+      <textarea id="questionText" rows="7" placeholder="识别后的题干和选项会出现在这里，也可以手动粘贴或修正。" maxlength="12000"></textarea>
+      <p id="questionWarning" class="hint warning" hidden></p>
+      <div id="imageBox" class="image-box" hidden><img id="questionImage" alt="即将发送或已发送的题目截图"><button id="removeImage" class="small-button">移除截图</button></div>
+      <div class="question-actions"><button id="enableCapture" class="small-button" type="button">启用截图识别</button><span id="charCount" class="hint">0 字</span></div>
+      <p id="captureStatus" class="hint">题干读不到时，可授权截图识别。Edge 会提示允许访问所有网站；题伴只截取当前绑定的测验页，并把截图发给你配置的模型。</p>
+      <button id="solve" class="primary full" disabled>解答当前题</button>
+      <button id="cancel" class="text-button full" hidden>取消本次解答</button>
+    </section>
+
+    <section class="card answer-card" id="answerCard" aria-live="polite">
+      <div class="card-heading"><h2>参考答案</h2><span id="answerBadge" class="tag">待解答</span></div>
+      <div id="emptyAnswer" class="empty-state"><span class="empty-symbol" aria-hidden="true">✧</span><p>把重复操作交给题伴<br><small>保留自己的判断</small></p></div>
+      <div id="answerContent" hidden><div id="singleAnswer"><p id="answer" class="answer"></p><div class="divider"></div><h3>解题说明</h3><p id="explanation" class="explanation"></p></div><div id="regionAnswers" hidden></div><details id="recognizedBox" hidden><summary>模型识别的题目</summary><p id="recognizedText"></p></details><p id="answerSource" class="hint warning"></p><button id="confirmCurrent" class="small-button" type="button" hidden>我已核对，此答案正确</button><button id="reviewCurrent" class="small-button" type="button">纠错 / 查看记录</button><button id="copyAnswer" class="small-button">复制答案</button></div>
+    </section>
+    <section class="card bank-card">
+      <details id="bankDetails"><summary>本地题库（仅导入）</summary>
+        <p id="bankSummary" class="hint"></p>
+        <p class="hint">新题和模型答案不会自动加入题库。题库只通过外部文件导入；可核对、修改和导出已保存的题库，信任导入文件后可直接复用匹配的文本题。“已确认”表示你选择信任，程序不保证答案正确；仍需匹配题干和整组选项。图片题只留记录。最多 1500 条，存储满时淘汰最早记录。</p>
+        <label for="recordFilter">筛选记录</label><select id="recordFilter"><option value="all">全部记录</option><option value="pending">待核验</option><option value="verified">已确认正确</option><option value="conflict">答案冲突</option><option value="invalid">已标记错误</option></select>
+        <p id="recordChoicesTitle" class="hint">勾选要批量确认的题目</p>
+        <div class="tools"><button id="selectAllRecords" class="small-button" type="button">全选当前列表</button><button id="clearRecordSelection" class="small-button" type="button" disabled>取消全部勾选</button></div>
+        <p id="selectionSummary" class="hint" role="status"></p>
+        <div id="recordChoices" class="record-choices" role="group" aria-labelledby="recordChoicesTitle"></div>
+        <button id="confirmFiltered" class="small-button full" type="button" disabled>批量保存并确认选中的 0 题</button>
+        <p id="bulkConfirmHint" class="hint"></p>
+        <label for="recordSelect">查看 / 修改单题详情（不影响勾选）</label><select id="recordSelect" aria-label="选择要查看的答题记录"></select>
+        <p id="recordMeta" class="hint"></p>
+        <label for="recordQuestion">记录中的原题和选项</label><textarea id="recordQuestion" rows="5" readonly></textarea>
+        <label for="recordAnswer">核对 / 修正选项字母</label><input id="recordAnswer" placeholder="例如 A 或 A、C" maxlength="40">
+        <label for="recordExplanation">解析</label><textarea id="recordExplanation" rows="3" maxlength="1200"></textarea>
+        <label for="recordNote">核验依据或纠错说明</label><input id="recordNote" placeholder="例如：已对照教材 / 网页批改显示正确答案为 C" maxlength="400">
+        <div class="tools"><button id="confirmRecord" class="small-button" type="button">保存并确认为正确</button><button id="rejectRecord" class="small-button" type="button">标记答案错误</button><button id="deleteRecord" class="small-button" type="button">删除此记录</button></div>
+        <details><summary>来源与修改历史</summary><pre id="recordHistory"></pre></details>
+        <label class="check-row"><input id="trustImport" type="checkbox" checked>信任导入文件，直接全部设为已确认</label>
+        <p class="hint">默认采用文件中的答案，覆盖相同题目的旧答案，包括冲突或标错记录；文件中重复题采用最后一条。取消勾选则先作为待核验记录导入。</p>
+        <div class="tools"><button id="exportBank" class="small-button" type="button">导出记录</button><label class="small-button import-label">导入记录<input id="importBank" type="file" accept="application/json,.json"></label></div>
+        <p id="bankStatus" class="hint" role="status"></p>
+      </details>
+    </section>
+    <footer><span id="modelLabel">尚未配置模型</span><span>题伴 1.6.32 · 开源预览</span></footer>
+  </main>
+  <script type="module" src="sidepanel.js"></script>
+</body>
+</html>

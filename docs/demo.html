@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="zh-CN">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>题伴 · 本地流程演示</title>
+<style>
+body{max-width:760px;margin:50px auto;padding:0 24px;font:16px/1.8 system-ui,sans-serif;color:#203a35;background:#f5f5f1}h1{font-size:27px}fieldset{border:1px solid #d1ddd3;border-radius:12px;background:white;padding:26px;margin:28px 0}legend,.question-title{font-weight:650}.option{display:block;padding:12px 8px;cursor:pointer}.option input{margin-right:12px}input[type=text]{width:100px;padding:8px;font:inherit}button{padding:10px 18px;font:inherit;cursor:pointer;background:#216550;color:white;border:0;border-radius:7px}.hint{color:#667b6f;font-size:14px}pre{background:#edf4ee;border-radius:10px;padding:16px;white-space:pre-wrap}#notice{margin-top:16px}
+</style>
+<h1>题伴 · 本地流程演示</h1>
+<p>三个合成题目，使用预设答案验证读取和填写。无需真实课程、账号或模型密钥。</p>
+<p class="hint">题伴设置：API 为 <code>http://127.0.0.1:8765/v1</code>，模型 ID 为 <code>demo</code>，密钥留空。若修改了服务端口，请同步调整 API 地址。</p>
+<p id="progress"></p>
+<main id="quiz"></main>
+<button id="next" type="button">下一题</button>
+<button id="submit" type="button" hidden>提交演示（手动）</button>
+<p id="notice" role="status"></p>
+<h2>网页实际保留的答案</h2>
+<pre id="record"></pre>
+<script>
+const questions=[
+ {type:'单选题',stem:'演示一：2 + 2 等于多少？',options:['3','4','5'],kind:'radio'},
+ {type:'多选题',stem:'演示二：请选择所有偶数。',options:['2','3','4'],kind:'checkbox'},
+ {type:'填空题',stem:'演示三：按顺序填写两个空：2 + 3 = ____，2 × 3 = ____。',kind:'blank'}
+];
+let index=0;const answers=[[],[],['','']];
+const quiz=document.getElementById('quiz'),record=document.getElementById('record');
+function update(){record.textContent=answers.map((a,i)=>`第 ${i+1} 题：${a.length?a.join('、'):'未填写'}`).join('\n')}
+function render(){
+ const q=questions[index];
+ document.getElementById('progress').textContent=`第 ${index+1} / ${questions.length} 题`;
+ quiz.innerHTML='<fieldset class="question" data-question-id="demo-'+index+'"><legend class="q-type">'+q.type+'</legend><p class="question-title">'+q.stem+'</p>'+(q.kind==='blank'?'<label>第一空 <input type="text" aria-label="第一空"></label> <label>第二空 <input type="text" aria-label="第二空"></label>':q.options.map((text,i)=>'<label class="option"><input type="'+q.kind+'" name="answer" value="'+String.fromCharCode(65+i)+'">'+String.fromCharCode(65+i)+'. '+text+'</label>').join(''))+'</fieldset>';
+ const inputs=[...quiz.querySelectorAll('input')];
+ for(const input of inputs){input.addEventListener('input',save);input.addEventListener('change',save)}
+ function save(){answers[index]=q.kind==='blank'?inputs.map(n=>n.value):inputs.filter(n=>n.checked).map(n=>n.value);update()}
+ document.getElementById('next').hidden=index===questions.length-1;document.getElementById('submit').hidden=index!==questions.length-1;update();
+}
+document.getElementById('next').onclick=()=>{if(index<questions.length-1){index++;render()}};
+document.getElementById('submit').onclick=()=>{document.getElementById('notice').textContent='已手动提交本地演示；没有向课程平台发送任何内容。'};
+render();
+</script>
+</html>
